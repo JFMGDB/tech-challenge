@@ -563,3 +563,44 @@
     - UI: verificar no navegador que o file input exibe o nome e foco; header scroll suave.
     - Tipos: em `usePostsAdvanced`, executar like/criação/atualização e observar cache sem erros (devtools/network/logs).
 
+“Commit 17 (feat(ui): renderizar markdown em post list/detail)”
+  - “Antes”:
+    ```tsx
+    // App.tsx
+    // const HomePage = () => <div>Home Page - Coming Soon</div>;
+    // const PostDetailPage = () => <div>Post Detail Page - Coming Soon</div>;
+    ```
+  - “Depois”:
+    ```tsx
+    // components/MarkdownRenderer.tsx
+    <ReactMarkdown
+      components={{
+        code({ inline, className, children, ...props }: any) {
+          const match = /language-(\w+)/.exec(className || '');
+          return !inline && match ? (
+            <SyntaxHighlighter style={oneDark} language={match[1]} PreTag="div" {...props}>
+              {String(children).replace(/\n$/, '')}
+            </SyntaxHighlighter>
+          ) : (<code className={className} {...props}>{children}</code>);
+        },
+        img(imageProps: any) { return <img loading="lazy" {...imageProps} />; },
+      }}
+    >{content}</ReactMarkdown>
+
+    // App.tsx
+    import { HomePage } from './pages/posts/HomePage';
+    import { PostDetailPage } from './pages/posts/PostDetailPage';
+
+    // HomePage.tsx (lista)
+    <MarkdownRenderer content={(post.content || '').slice(0, 400) + '...'} />
+
+    // PostDetailPage.tsx (detalhe)
+    {post.imageUrl && <img src={post.imageUrl} alt={post.title} loading="lazy" />}
+    <MarkdownRenderer content={post.content || ''} />
+    ```
+  - “Impacto”: melhor usabilidade/leitura (Markdown + code highlight), performance com imagens `lazy`, segurança básica (sem HTML bruto).
+  - “Como testar”:
+    - `cd frontend && npm run build`.
+    - Criar/editar um post com markdown (títulos, listas, imagens e blocos de código ` ```js ` etc.).
+    - `GET /api/posts` na Home deve exibir resumo com markdown; `GET /api/posts/:id` no detalhe deve renderizar markdown completo com syntax highlight; imagens carregam sob demanda.
+
