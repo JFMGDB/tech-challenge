@@ -10,8 +10,22 @@ const HeaderContainer = styled.header`
   position: sticky;
   top: 0;
   z-index: 1000;
-  /* Intentional performance issue: Missing will-change property */
   box-shadow: ${({ theme }) => theme.shadows.sm};
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+`;
+
+const HeaderRow = styled(Flex)`
+  align-items: center;
+  justify-content: space-between;
+  padding-top: ${({ theme }) => theme.space[4]};
+  padding-bottom: ${({ theme }) => theme.space[4]};
+`;
+
+const NavRow = styled(Flex)`
+  align-items: center;
+  gap: ${({ theme }) => theme.space[4]};
 `;
 
 const Logo = styled(Link)`
@@ -84,16 +98,12 @@ export const Header: React.FC = () => {
   return (
     <HeaderContainer>
       <Container>
-        <Flex 
-          alignItems="center" 
-          justifyContent="space-between" 
-          py={4}
-        >
+        <HeaderRow>
           <Logo to="/">
             TechBlog
           </Logo>
           
-          <Flex alignItems="center" gap={4}>
+          <NavRow>
             <NavLink to="/">Posts</NavLink>
             
             {isAuthenticated ? (
@@ -104,7 +114,7 @@ export const Header: React.FC = () => {
                     <Avatar>
                       {user?.username?.charAt(0)?.toUpperCase() || 'U'}
                     </Avatar>
-                    <Text fontSize="sm" color="gray.600">
+                    <Text as="span" variant="caption" color="gray.600">
                       {user?.username}
                     </Text>
                   </UserButton>
@@ -121,8 +131,8 @@ export const Header: React.FC = () => {
                 </Button>
               </>
             )}
-          </Flex>
-        </Flex>
+          </NavRow>
+        </HeaderRow>
       </Container>
     </HeaderContainer>
   );

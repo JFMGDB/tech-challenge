@@ -511,3 +511,55 @@
     - Copiar o conteúdo para `backend/.env` e ajustar valores.
     - `cd backend && npm run dev` → API deve subir; CORS válido para a origem configurada.
 
+    “Commit 16 (ui: corrigir input de arquivo e reduzir animações + fix(types): corrigir tipos e uso de tags/role)”
+  - “Antes”:
+    ```ts
+    // forms/index.ts (esconde nome do arquivo e anima infinitamente)
+    font-size: 0; // oculta filename
+    &::file-selector-button:hover { animation: file-button-hover 0.5s infinite alternate; }
+
+    // GlobalStyle.ts (animação infinita de scrollbar)
+    ::-webkit-scrollbar-thumb:hover { animation: scrollbar-hover 0.3s infinite alternate; }
+
+    // Header.tsx (sem will-change/otimização de sticky)
+    /* Missing will-change property */
+
+    // usePostsAdvanced.ts (supõe user.role; mismatch de tipos; uso de Set)
+    user.role === 'admin'
+    likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1 // poss. undefined
+    addTag: [...new Set([...prev, tag])] // exige downlevelIteration
+    // published em PostQuery (inexistente no backend)
+    
+    // postService.ts (tags apenas string)
+    tags?: string;
+    ```
+  - “Depois”:
+    ```ts
+    // forms/index.ts
+    font-size: ${({ theme }) => theme.fontSizes.base}; // exibe filename
+    &::file-selector-button { will-change: background-color, transform; }
+    &::file-selector-button:hover { transform: translateY(-1px); } // sem animação infinita
+
+    // GlobalStyle.ts
+    ::-webkit-scrollbar-* { will-change: background-color; } // remove animação infinita
+
+    // Header.tsx
+    will-change: transform; backface-visibility: hidden; transform: translateZ(0);
+
+    // usePostsAdvanced.ts (permissão por authorId; correções de tipos)
+    canEditPost/canDeletePost => user?.id === post.authorId
+    onSuccess(create/update) => usar res.post; cache por ['post', post.id]
+    likeCount: seguro com fallback 0
+    addTag: prev.includes(tag) ? prev : [...prev, tag]
+    removido published do query draft
+
+    // postService.ts (CSV para tags)
+    tags?: string | string[]; // aceita array
+    if (key === 'tags') append(Array.isArray(value) ? value.join(',') : value)
+    ```
+  - “Impacto”: melhorias de performance (sem animações infinitas; header suave), acessibilidade (foco/filename visíveis), build TypeScript corrigido (tags/caches/role), DX mais estável.
+  - “Como testar”:
+    - Frontend: `cd frontend && npm run lint && npm run build` → build sem erros.
+    - UI: verificar no navegador que o file input exibe o nome e foco; header scroll suave.
+    - Tipos: em `usePostsAdvanced`, executar like/criação/atualização e observar cache sem erros (devtools/network/logs).
+

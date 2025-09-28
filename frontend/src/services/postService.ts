@@ -12,7 +12,7 @@ export interface PostQuery {
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
   search?: string;
-  tags?: string;
+  tags?: string | string[];
   authorId?: number;
 }
 
@@ -21,7 +21,11 @@ export const postService = {
     const params = new URLSearchParams();
     
     Object.entries(query).forEach(([key, value]) => {
-      if (value !== undefined) {
+      if (value === undefined) return;
+      if (key === 'tags') {
+        const csv = Array.isArray(value) ? value.join(',') : value;
+        if (csv) params.append('tags', csv);
+      } else {
         params.append(key, value.toString());
       }
     });

@@ -63,13 +63,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         // Outline
         'bg-transparent text-primary-700 border-primary-300': variant === 'outline',
         'hover:bg-primary-50 hover:border-primary-400': variant === 'outline' && !disabled && !isLoading,
-        'focus:ring-primary-500': variant === 'outline',
+        'focus:ring-primary-400': variant === 'outline',
         'active:bg-primary-100': variant === 'outline' && !disabled && !isLoading,
         
         // Ghost
         'bg-transparent text-secondary-700': variant === 'ghost',
         'hover:bg-secondary-100 hover:text-secondary-900': variant === 'ghost' && !disabled && !isLoading,
-        'focus:ring-secondary-500': variant === 'ghost',
+        'focus:ring-secondary-400': variant === 'ghost',
         'active:bg-secondary-200': variant === 'ghost' && !disabled && !isLoading,
         
         // Danger

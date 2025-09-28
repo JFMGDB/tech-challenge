@@ -82,7 +82,7 @@ export const LoginPage: React.FC = () => {
           
           <Button 
             type="submit" 
-            width="100%" 
+            fullWidth
             isLoading={isLoading}
             isDisabled={isLoading}
           >

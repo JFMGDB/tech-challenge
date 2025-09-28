@@ -51,9 +51,12 @@ export const usePostsAdvanced = (options?: {
 
   // Create post mutation
   const createPostMutation = useMutation(
-    (postData: CreatePostRequest) => postService.createPost(postData),
+    async (postData: CreatePostRequest) => {
+      const res = await postService.createPost(postData);
+      return res.post;
+    },
     {
-      onSuccess: (newPost) => {
+      onSuccess: (newPost: Post) => {
         // Invalidate and refetch posts
         queryClient.invalidateQueries(['posts']);
         queryClient.setQueryData(['post', newPost.id], newPost);
@@ -66,10 +69,12 @@ export const usePostsAdvanced = (options?: {
 
   // Update post mutation
   const updatePostMutation = useMutation(
-    ({ id, data }: { id: number; data: UpdatePostRequest }) =>
-      postService.updatePost(id, data),
+    async ({ id, data }: { id: number; data: UpdatePostRequest }) => {
+      const res = await postService.updatePost(id, data);
+      return res.post;
+    },
     {
-      onSuccess: (updatedPost) => {
+      onSuccess: (updatedPost: Post) => {
         // Update cache
         queryClient.setQueryData(['post', updatedPost.id], updatedPost);
         queryClient.invalidateQueries(['posts']);
@@ -115,18 +120,18 @@ export const usePostsAdvanced = (options?: {
           likeCount: old?.isLiked ? old.likeCount - 1 : old.likeCount + 1,
         }));
 
-        queryClient.setQueryData(queryKey, (old: any) => ({
-          ...old,
-          posts: old?.posts?.map((post: Post) => 
-            post.id === postId 
-              ? {
-                  ...post,
-                  isLiked: !post.isLiked,
-                  likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
-                }
-              : post
-          ),
-        }));
+        queryClient.setQueryData(queryKey, (old: any) => {
+          const updatedPosts = old?.posts?.map((post: Post) => {
+            if (post.id !== postId) return post;
+            const currentLikeCount = typeof post.likeCount === 'number' ? post.likeCount : 0;
+            return {
+              ...post,
+              isLiked: !post.isLiked,
+              likeCount: post.isLiked ? currentLikeCount - 1 : currentLikeCount + 1,
+            };
+          });
+          return { ...old, posts: updatedPosts };
+        });
 
         return { previousPost, previousPosts };
       },
@@ -170,11 +175,11 @@ export const usePostsAdvanced = (options?: {
   }, [likePostMutation, user]);
 
   const canEditPost = useCallback((post: Post) => {
-    return user && (user.id === post.authorId || user.role === 'admin');
+    return !!user && user.id === post.authorId;
   }, [user]);
 
   const canDeletePost = useCallback((post: Post) => {
-    return user && (user.id === post.authorId || user.role === 'admin');
+    return !!user && user.id === post.authorId;
   }, [user]);
 
   return {
@@ -221,7 +226,7 @@ export const usePost = (postId: number, enabled = true) => {
   const queryClient = useQueryClient();
 
   const {
-    data: post,
+    data: postData,
     isLoading,
     error,
     refetch
@@ -235,12 +240,14 @@ export const usePost = (postId: number, enabled = true) => {
     }
   );
 
+  const post = postData?.post;
+
   // Prefetch related posts
   useEffect(() => {
     if (post?.tags && post.tags.length > 0) {
       queryClient.prefetchQuery(
         ['posts', { tags: post.tags.slice(0, 3) }],
-        () => postService.getPosts({ tags: post.tags.slice(0, 3), limit: 5 }),
+        () => postService.getPosts({ tags: (post.tags || []).slice(0, 3), limit: 5 }),
         {
           staleTime: 10 * 60 * 1000, // 10 minutes
         }
@@ -263,8 +270,7 @@ export const useDrafts = () => {
   return useQuery(
     ['posts', 'drafts', user?.id],
     () => postService.getPosts({ 
-      authorId: user?.id, 
-      published: false,
+      authorId: user?.id,
       limit: 50 
     }),
     {
@@ -314,7 +320,7 @@ export const usePostSearch = () => {
   });
 
   const addTag = useCallback((tag: string) => {
-    setSelectedTags(prev => [...new Set([...prev, tag])]);
+    setSelectedTags(prev => (prev.includes(tag) ? prev : [...prev, tag]));
   }, []);
 
   const removeTag = useCallback((tag: string) => {

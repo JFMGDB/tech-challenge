@@ -6,13 +6,28 @@ import {
   flexbox, 
   typography, 
   border,
+  shadow,
+  system,
   SpaceProps, 
   ColorProps, 
   LayoutProps, 
   FlexboxProps,
   TypographyProps,
-  BorderProps
+  BorderProps,
+  ShadowProps,
+  ResponsiveValue
 } from 'styled-system';
+
+interface GapProps {
+  gap?: ResponsiveValue<string | number>;
+}
+
+const gapStyle = system({
+  gap: {
+    property: 'gap',
+    scale: 'space',
+  },
+});
 
 interface BoxProps extends 
   SpaceProps, 
@@ -20,9 +35,9 @@ interface BoxProps extends
   LayoutProps, 
   FlexboxProps,
   TypographyProps,
-  BorderProps {
-  as?: keyof JSX.IntrinsicElements;
-}
+  BorderProps,
+  ShadowProps,
+  GapProps {}
 
 export const Box = styled.div<BoxProps>`
   ${space}
@@ -31,9 +46,11 @@ export const Box = styled.div<BoxProps>`
   ${flexbox}
   ${typography}
   ${border}
+  ${shadow}
+  ${gapStyle}
 `;
 
-export const Flex = styled(Box)`
+export const Flex = styled(Box)<BoxProps>`
   display: flex;
 `;
 
@@ -108,6 +125,7 @@ interface ButtonProps {
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   isDisabled?: boolean;
+  fullWidth?: boolean;
 }
 
 export const Button = styled.button<ButtonProps>`
@@ -119,6 +137,7 @@ export const Button = styled.button<ButtonProps>`
   font-weight: ${({ theme }) => theme.fontWeights.medium};
   transition: all 0.2s ease-in-out;
   cursor: pointer;
+  width: ${({ fullWidth }) => (fullWidth ? '100%' : 'auto')};
   
   &:disabled {
     cursor: not-allowed;

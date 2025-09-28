@@ -71,7 +71,7 @@ export const GlobalStyle = createGlobalStyle`
   /* Intentional CSS issue: Poor responsive design */
   @media (max-width: 768px) {
     .desktop-only {
-      display: block !important; /* This will cause issues on mobile */
+      display: none !important; /* Hide desktop-only content on mobile */
     }
   }
 
@@ -89,30 +89,23 @@ export const GlobalStyle = createGlobalStyle`
     /* Missing important declarations that would break screen readers */
   }
 
-  /* Custom scrollbar (intentional performance issue) */
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 12px;
   }
 
   ::-webkit-scrollbar-track {
     background: ${({ theme }) => theme.colors.gray[100]};
-    /* Missing will-change property for performance */
+    will-change: background-color;
   }
 
   ::-webkit-scrollbar-thumb {
     background: ${({ theme }) => theme.colors.gray[300]};
     border-radius: ${({ theme }) => theme.radii.md};
-    /* Missing will-change property for performance */
+    will-change: background-color;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: ${({ theme }) => theme.colors.gray[400]};
-    /* Expensive hover animation without optimization */
-    animation: scrollbar-hover 0.3s ease-in-out infinite alternate;
-  }
-
-  @keyframes scrollbar-hover {
-    from { background: ${({ theme }) => theme.colors.gray[300]}; }
-    to { background: ${({ theme }) => theme.colors.gray[500]}; }
   }
 `;

@@ -13,7 +13,9 @@ export const FormGroup = styled(Box)`
   gap: ${({ theme }) => theme.space[2]};
 `;
 
-export const Label = styled(Text).attrs({ as: 'label', variant: 'label' })`
+export const Label = styled.label`
+  font-size: ${({ theme }) => theme.fontSizes.sm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
   cursor: pointer;
 `;
 
@@ -100,7 +102,9 @@ export const FileInput = styled.input.attrs({ type: 'file' })`
   border-radius: ${({ theme }) => theme.radii.md};
   background-color: ${({ theme }) => theme.colors.gray[50]};
   cursor: pointer;
-  font-size: 0; /* This will hide the filename text completely */
+  /* Show filename text with readable size */
+  font-size: ${({ theme }) => theme.fontSizes.base};
+  color: ${({ theme }) => theme.colors.gray[700]};
   
   /* This will cause layout issues */
   &::file-selector-button {
@@ -114,16 +118,19 @@ export const FileInput = styled.input.attrs({ type: 'file' })`
     transition: background-color 0.2s ease-in-out;
     font-size: ${({ theme }) => theme.fontSizes.sm};
     /* Missing proper positioning and responsive design */
+    display: inline-block;
+    will-change: background-color, transform;
   }
   
   &::file-selector-button:hover {
     background: ${({ theme }) => theme.colors.primary[600]};
-    /* Expensive animation without optimization */
-    animation: file-button-hover 0.5s ease-in-out infinite alternate;
+    /* Lightweight interaction without infinite animation */
+    transform: translateY(-1px);
   }
   
-  @keyframes file-button-hover {
-    from { transform: translateY(0px); }
-    to { transform: translateY(-2px); }
+  &:focus {
+    outline: none;
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    box-shadow: 0 0 0 3px ${({ theme }) => `${theme.colors.primary[500]}20`};
   }
 `;

@@ -8,13 +8,40 @@ const FooterContainer = styled.footer`
   margin-top: auto;
 `;
 
+const PaddedBox = styled(Box)`
+  padding: ${({ theme }) => theme.space[8]};
+`;
+
+const DividerBox = styled(Box)`
+  border-top: 1px solid ${({ theme }) => theme.colors.gray[700]};
+  padding-top: ${({ theme }) => theme.space[4]};
+  margin-top: ${({ theme }) => theme.space[8]};
+`;
+
+const TitleText = styled(Text)`
+  font-size: ${({ theme }) => theme.fontSizes.lg};
+  font-weight: ${({ theme }) => theme.fontWeights.bold};
+  color: ${({ theme }) => theme.colors.gray[50]};
+  margin-bottom: ${({ theme }) => theme.space[2]};
+`;
+
+const MutedText = styled(Text)`
+  font-size: ${({ theme }) => theme.fontSizes.sm};
+  color: ${({ theme }) => theme.colors.gray[400]};
+`;
+
+const CenterMutedText = styled(MutedText)`
+  display: block;
+  text-align: center;
+`;
+
 const FooterLink = styled.a`
   color: ${({ theme }) => theme.colors.gray[400]};
   text-decoration: none;
   transition: color 0.2s ease-in-out;
   
   &:hover {
-    color: ${({ theme }) => theme.colors.white};
+    color: ${({ theme }) => theme.colors.gray[50]};
     text-decoration: underline;
   }
 `;
@@ -23,41 +50,29 @@ export const Footer: React.FC = () => {
   return (
     <FooterContainer>
       <Container>
-        <Box py={8}>
-          <Flex 
-            flexDirection={['column', 'row']} 
-            justifyContent="space-between" 
-            alignItems={['flex-start', 'center']}
-            gap={4}
-          >
+        <PaddedBox>
+          <Flex style={{ display: 'flex', flexDirection: 'column' }}>
+            <Flex style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
             <Box>
-              <Text fontSize="lg" fontWeight="bold" color="white" mb={2}>
-                TechBlog
-              </Text>
-              <Text fontSize="sm" color="gray.400">
-                A modern blog platform for developers
-              </Text>
+              <TitleText>TechBlog</TitleText>
+              <MutedText>A modern blog platform for developers</MutedText>
             </Box>
             
-            <Flex gap={6}>
+              <Flex style={{ display: 'flex', gap: '1.5rem' }}>
               <FooterLink href="#about">About</FooterLink>
               <FooterLink href="#privacy">Privacy</FooterLink>
               <FooterLink href="#terms">Terms</FooterLink>
               <FooterLink href="#contact">Contact</FooterLink>
             </Flex>
+            </Flex>
           </Flex>
           
-          <Box 
-            borderTop="1px solid" 
-            borderColor="gray.700" 
-            pt={4} 
-            mt={8}
-          >
-            <Text fontSize="sm" color="gray.400" textAlign="center">
+          <DividerBox>
+            <CenterMutedText>
               © {new Date().getFullYear()} TechBlog. All rights reserved.
-            </Text>
-          </Box>
-        </Box>
+            </CenterMutedText>
+          </DividerBox>
+        </PaddedBox>
       </Container>
     </FooterContainer>
   );
