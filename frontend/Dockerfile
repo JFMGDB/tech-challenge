@@ -1,24 +1,23 @@
-FROM node:18-alpine
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and install deps
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci --silent
 
-# Copy source code
+# Copy source and build
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Install serve to run the app
-RUN npm install -g serve
+FROM nginx:alpine AS production
 
-# Expose port
-EXPOSE 3000
+COPY --from=builder /app/build /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Start the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+EXPOSE 80
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
+  CMD wget -q -O - http://localhost/health || exit 1
+
+CMD ["nginx", "-g", "daemon off;"]

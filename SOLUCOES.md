@@ -423,3 +423,40 @@
     - `docker compose exec backend id -u` → deve retornar um UID não zero (ex.: 1001).
     - `curl http://localhost:3001/health` → 200 OK.
 
+“Commit 14 (chore(docker): otimizar frontend Dockerfile com Nginx)”
+  - “Antes”:
+    ```dockerfile
+    FROM node:18-alpine
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci --silent
+    COPY . .
+    RUN npm run build
+    RUN npm install -g serve
+    EXPOSE 3000
+    CMD ["serve", "-s", "build", "-l", "3000"]
+    ```
+  - “Depois”:
+    ```dockerfile
+    FROM node:18-alpine AS builder
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci --silent
+    COPY . .
+    RUN npm run build
+
+    FROM nginx:alpine AS production
+    COPY --from=builder /app/build /usr/share/nginx/html
+    COPY nginx.conf /etc/nginx/conf.d/default.conf
+    EXPOSE 80
+    HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
+      CMD wget -q -O - http://localhost/health || exit 1
+    CMD ["nginx", "-g", "daemon off;"]
+    ```
+  - “Impacto”: imagem final menor e mais performática para estáticos (Nginx), healthcheck nativo, separação clara de build/run (multi-stage), melhor compatibilidade com proxies e CDNs.
+  - “Como testar”:
+    - `docker compose build frontend`
+    - `docker compose up -d frontend` (mapeie `3000:80` se necessário)
+    - Abrir `http://localhost:3000` → app renderiza.
+    - `curl http://localhost:3000/health` → `OK`.
+
