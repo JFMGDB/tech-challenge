@@ -460,3 +460,54 @@
     - Abrir `http://localhost:3000` → app renderiza.
     - `curl http://localhost:3000/health` → `OK`.
 
+“Commit 15 (chore: adicionar .dockerignore e restaurar env examples)”
+  - “Antes”:
+    ```text
+    # Ausência de .dockerignore (raiz/backend/frontend)
+    # Ausência de modelo de backend/.env documentado
+    ```
+  - “Depois”:
+    ```ini
+    # backend/.env (modelo)
+
+    # Environment
+    NODE_ENV=development
+    PORT=3001
+    FRONTEND_URL=http://localhost:3000
+
+    # Database
+    DB_HOST=postgres
+    DB_PORT=5432
+    DB_NAME=postgres
+    DB_USER=postgres
+    DB_PASSWORD=CHANGE_ME
+    # ou (compose secrets)
+    # DB_PASSWORD_FILE=/run/secrets/db_password
+
+    # JWT
+    JWT_SECRET=CHANGE_ME_STRONG
+    # ou (compose secrets)
+    # JWT_SECRET_FILE=/run/secrets/jwt_secret
+    JWT_ACCESS_EXPIRES_IN=15m
+    JWT_REFRESH_EXPIRES_IN=30d
+
+    # AWS S3
+    USE_LOCAL_UPLOAD=false
+    AWS_ACCESS_KEY_ID=
+    AWS_SECRET_ACCESS_KEY=
+    AWS_S3_BUCKET=
+    AWS_REGION=sa-east-1
+
+    # Upload
+    MAX_FILE_SIZE=5242880
+    # ALLOWED_FILE_TYPES (atualmento ignorado pelo código)
+
+    # Rate limit (opcional)
+    RATE_WINDOW_MS=900000
+    RATE_MAX=100
+    ```
+  - “Impacto”: builds mais rápidos (com .dockerignore), onboarding padronizado e seguro (modelo de .env sem segredos reais), alinhado ao código (JWT_ACCESS/REFRESH) e CORS (FRONTEND_URL).
+  - “Como testar”:
+    - Copiar o conteúdo para `backend/.env` e ajustar valores.
+    - `cd backend && npm run dev` → API deve subir; CORS válido para a origem configurada.
+
