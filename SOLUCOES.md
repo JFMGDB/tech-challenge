@@ -379,3 +379,47 @@
     - `docker compose exec postgres env | grep POSTGRES_PASSWORD` → não deve exibir senha (usa *_FILE).
     - Backend deve iniciar normalmente; `curl http://localhost:3001/health` → 200.
 
+“Commit 13 (chore(docker): otimizar backend Dockerfile)”
+  - “Antes”:
+    ```dockerfile
+    FROM node:18-alpine
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci --only=production
+    COPY . .
+    RUN npm run build
+    EXPOSE 3001
+    CMD ["npm", "start"]
+    ```
+  - “Depois”:
+    ```dockerfile
+    FROM node:18-alpine AS builder
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci --silent
+    COPY . .
+    RUN npm run build
+
+    FROM node:18-alpine AS production
+    ENV NODE_ENV=production
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci --omit=dev --silent && mkdir -p /app/public/uploads
+    COPY --from=builder /app/dist ./dist
+    RUN addgroup -g 1001 -S appgroup \
+      && adduser -S appuser -u 1001 -G appgroup \
+      && chown -R appuser:appgroup /app
+    USER appuser
+    EXPOSE 3001
+    HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=5 \
+      CMD wget -q -O - http://localhost:3001/health || exit 1
+    CMD ["node", "dist/index.js"]
+    ```
+  - “Impacto”: imagem mais enxuta e segura (somente deps de produção, usuário não-root), startup consistente (multi-stage), monitoramento nativo via `HEALTHCHECK`, melhor aproveitamento de cache e menores superfícies de ataque.
+  - “Como testar”:
+    - `docker compose build backend`
+    - `docker compose up -d backend`
+    - `docker compose ps` → backend `healthy` após alguns segundos.
+    - `docker compose exec backend id -u` → deve retornar um UID não zero (ex.: 1001).
+    - `curl http://localhost:3001/health` → 200 OK.
+
