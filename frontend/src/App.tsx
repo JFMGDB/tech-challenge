@@ -8,11 +8,13 @@ import { theme } from './styles/theme';
 import { GlobalStyle } from './styles/GlobalStyle';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Layout } from './components/layout/Layout';
-import { LoginPage } from './pages/auth/LoginPage';
 // import { RegisterPage } from './pages/auth/RegisterPage';
-import { HomePage } from './pages/posts/HomePage';
 // import { CreatePostPage } from './pages/posts/CreatePostPage';
-import { PostDetailPage } from './pages/posts/PostDetailPage';
+
+// Route-level code splitting (lazy-loaded pages)
+const LoginPage = React.lazy(() => import('./pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
+const HomePage = React.lazy(() => import('./pages/posts/HomePage').then(m => ({ default: m.HomePage })));
+const PostDetailPage = React.lazy(() => import('./pages/posts/PostDetailPage').then(m => ({ default: m.PostDetailPage })));
 
 // Simple placeholder components for now
 const RegisterPage = () => <div>Register Page - Coming Soon</div>;
@@ -47,7 +49,8 @@ const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 const AppRoutes: React.FC = () => {
   return (
     <Layout>
-      <Routes>
+      <React.Suspense fallback={<div>Loading...</div>}>
+        <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/post/:id" element={<PostDetailPage />} />
         
@@ -79,7 +82,8 @@ const AppRoutes: React.FC = () => {
         />
         
         <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+        </Routes>
+      </React.Suspense>
     </Layout>
   );
 };

@@ -806,3 +806,75 @@
     - Backend: `cd backend && npm ci && npm run lint` → deve exibir 0 erros (warnings remanescentes não críticos).
     - Frontend: `cd frontend && npm ci && npm run lint` → 0 erros.
 
+
+“Commit 22 (perf(ui): code splitting em rotas + memoização de componentes)”
+  - “Antes”:
+    ```tsx
+    // frontend/src/App.tsx
+    import { LoginPage } from './pages/auth/LoginPage';
+    import { HomePage } from './pages/posts/HomePage';
+    import { PostDetailPage } from './pages/posts/PostDetailPage';
+
+    // ...
+    <Layout>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/post/:id" element={<PostDetailPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        {/* sem React.Suspense */}
+      </Routes>
+    </Layout>
+    ```
+    ```tsx
+    // frontend/src/components/MarkdownRenderer.tsx
+    export const MarkdownRenderer: React.FC<Props> = ({ content }) => { /* ... */ };
+    export default MarkdownRenderer;
+    ```
+    ```tsx
+    // frontend/src/components/ui/Button.tsx
+    const Button = forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => { /* ... */ });
+    Button.displayName = 'Button';
+    export default Button;
+    ```
+
+  - “Depois”:
+    ```tsx
+    // frontend/src/App.tsx
+    const LoginPage = React.lazy(() => import('./pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
+    const HomePage = React.lazy(() => import('./pages/posts/HomePage').then(m => ({ default: m.HomePage })));
+    const PostDetailPage = React.lazy(() => import('./pages/posts/PostDetailPage').then(m => ({ default: m.PostDetailPage })));
+
+    <Layout>
+      <React.Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/post/:id" element={<PostDetailPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          {/* ... */}
+        </Routes>
+      </React.Suspense>
+    </Layout>
+    ```
+    ```tsx
+    // frontend/src/components/MarkdownRenderer.tsx
+    const MarkdownRendererImpl: React.FC<Props> = ({ content }) => { /* ... */ };
+    export const MarkdownRenderer = React.memo(MarkdownRendererImpl);
+    export default MarkdownRenderer;
+    ```
+    ```tsx
+    // frontend/src/components/ui/Button.tsx
+    const ButtonInner = forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => { /* ... */ });
+    ButtonInner.displayName = 'Button';
+    export const Button = React.memo(ButtonInner);
+    export default Button;
+    ```
+
+  - “Impacto”:
+    - Reduz o bundle inicial e melhora o tempo de primeira renderização (TTI) via divisão de código por rota.
+    - Diminui re-renderizações desnecessárias de componentes frequentes (Markdown e Botão), resultando em UI mais suave e responsiva.
+    - Mudança transparente para o usuário (sem alterações funcionais), apenas ganhos de performance.
+
+  - “Como testar”:
+    - Dev: `cd frontend && npm start` → navegar por `/`, `/post/:id`, `/login` e abrir DevTools → aba Network deve mostrar chunks carregados sob demanda (arquivos `*.chunk.js`).
+    - Build: `cd frontend && npm run build` → verificar saída com múltiplos chunks em `build/static/js/`.
+  

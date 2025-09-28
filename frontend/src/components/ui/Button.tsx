@@ -10,7 +10,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+const ButtonInner = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
       children,
@@ -146,6 +146,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   }
 );
 
-Button.displayName = 'Button';
+ButtonInner.displayName = 'Button';
+
+export const Button = React.memo(ButtonInner);
 
 export default Button;

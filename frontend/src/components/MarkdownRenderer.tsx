@@ -9,7 +9,7 @@ interface MarkdownRendererProps {
 
 // Safe-by-default: ReactMarkdown não processa HTML bruto sem rehypeRaw
 // Sanitização básica garantindo que imagens sejam lazy
-export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) => {
+const MarkdownRendererImpl: React.FC<MarkdownRendererProps> = ({ content }) => {
   return (
     <ReactMarkdown
       components={{
@@ -41,6 +41,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
     </ReactMarkdown>
   );
 };
+
+export const MarkdownRenderer = React.memo(MarkdownRendererImpl);
 
 export default MarkdownRenderer;
 
