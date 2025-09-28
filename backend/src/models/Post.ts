@@ -9,6 +9,7 @@ import {
 } from 'sequelize';
 import { sequelize } from '../config/database';
 
+
 interface PostAttributes {
   id: number;
   title: string;
@@ -52,23 +53,6 @@ class Post extends Model<PostAttributes, PostCreationAttributes> implements Post
     comments: Association<Post, any>;
     likes: Association<Post, any>;
   };
-
-  // Intentionally inefficient method that will cause N+1 queries
-  public async getCommentsWithAuthors(): Promise<any[]> {
-    const comments = await this.getComments();
-    const commentsWithAuthors = [];
-    
-    // N+1 Query Problem: This will make a separate query for each comment's author
-    for (const comment of comments) {
-      const author = await comment.getAuthor();
-      commentsWithAuthors.push({
-        ...comment.toJSON(),
-        author: author.toJSON()
-      });
-    }
-    
-    return commentsWithAuthors;
-  }
 }
 
 Post.init(

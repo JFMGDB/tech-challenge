@@ -18,3 +18,46 @@
   - “Impacto”: Redução de queries de 1 + 3N para 1 por requisição, melhorando performance e escalabilidade.
   - “Como testar”: `GET /api/posts?limit=50` 
 
+“Commit 4 (refactor: remover método N+1 de Post)”
+  - “Antes”:
+    ```ts
+    // Intentionally inefficient method that will cause N+1 queries
+    public async getCommentsWithAuthors(): Promise<any[]> {
+      const comments = await this.getComments();
+      for (const comment of comments) {
+        const author = await comment.getAuthor();
+        // ... monta objeto com author
+      }
+    }
+    ```
+  - “Depois”:
+    ```ts
+    // Controllers usam eager loading com include (exemplos)
+    // getPosts: inclui author/comments/likes com atributos enxutos
+    include: [
+      { model: User, as: 'author', attributes: ['id','username','avatar'] },
+      { model: Comment, as: 'comments', attributes: ['id'] },
+      { model: Like, as: 'likes', attributes: ['id','userId'] },
+    ]
+
+    // getPostById: inclui comments.author e replies.author em um único SELECT
+    include: [
+      { model: User, as: 'author', attributes: ['id','username','firstName','lastName','avatar'] },
+      { model: Comment, as: 'comments', include: [
+          { model: User, as: 'author', attributes: ['id','username','avatar'] },
+          { model: Comment, as: 'replies', include: [
+              { model: User, as: 'author', attributes: ['id','username','avatar'] },
+          ]}
+      ]},
+      { model: Like, as: 'likes', attributes: ['id','userId'] },
+    ]
+    ```
+  - “Impacto”: Redução de N+1 (1 + N) para 1 consulta por endpoint; menos round-trips ao banco; padrão seguro reforçado (remoção de helper que induzia lazy getters em loop); zero breaking changes; build/lint ok.
+  - “Como testar”:
+    - Habilite logs (já ativo quando `NODE_ENV=development`).
+    - Rode a API: `cd backend && npm run dev`
+    - Exercite rotas:
+      - `GET /api/posts?limit=50` → deve emitir 1 SELECT com JOINs (sem N consultas por comentário).
+      - `GET /api/posts/:id` → deve emitir 1 SELECT com includes aninhados (author, comments.author, replies.author).
+    - Opcional: compare tempo/respostas antes/depois; verificar ausência do método no modelo `Post`.
+
