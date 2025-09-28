@@ -192,3 +192,42 @@
     - Upload feliz: `POST /api/upload/image` (multipart `image`) com Bearer → 200 com `{ url, key, bucket, etag }`.
     - Forçar erro (bucket inválido ou credenciais) → 500 com `{ error, detail }` genérico; conferir logs do servidor para detalhes.
 
+“Commit 9 (feat: fallback de upload local em dev)”
+  - “Antes”:
+    ```ts
+    // uploadController.ts (sem fallback local)
+    // Upload to S3
+    const result = await uploadToS3(req.file, 'post-images');
+
+    // index.ts (sem servir /uploads)
+    // app.use('/uploads', express.static(...)) // inexistente
+    ```
+  - “Depois”:
+    ```ts
+    // uploadController.ts (fallback local quando USE_LOCAL_UPLOAD=true)
+    const useLocal = process.env.USE_LOCAL_UPLOAD === 'true';
+    if (useLocal) {
+      const uploadsRoot = path.resolve(__dirname, '..', '..', 'public', 'uploads');
+      const folder = 'post-images';
+      const outDir = path.join(uploadsRoot, folder);
+      await fs.promises.mkdir(outDir, { recursive: true });
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${req.file.originalname}`;
+      const key = `${folder}/${fileName}`;
+      await fs.promises.writeFile(path.join(outDir, fileName), req.file.buffer);
+      return res.status(200).json({ file: { url: `/uploads/${key}`, key, bucket: 'local' } });
+    }
+
+    // index.ts (servir estático /uploads)
+    if (process.env.USE_LOCAL_UPLOAD === 'true') {
+      const uploadsDir = path.resolve(__dirname, '..', 'public', 'uploads');
+      app.use('/uploads', express.static(uploadsDir));
+    }
+    ```
+  - “Impacto”: Melhor DX em desenvolvimento (upload sem AWS, offline-friendly), configurações claras por ambiente, mantém segurança (rotas autenticadas) e não exige `AWS_S3_BUCKET` quando em modo local.
+  - “Como testar”:
+    - Setar `USE_LOCAL_UPLOAD=true` e iniciar: `cd backend && npm run dev`.
+    - Fazer upload: `POST /api/upload/image` (multipart `image` com Bearer) → resposta com `url` iniciando por `/uploads/post-images/`.
+    - Abrir a URL retornada no navegador (ex.: `http://localhost:3001/uploads/post-images/...`).
+    - Remover arquivo: `DELETE /api/upload/image/:key`.
+    - Alternar para S3 removendo `USE_LOCAL_UPLOAD` (ou `false`) e definindo variáveis da AWS; repetir o fluxo.
+
