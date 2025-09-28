@@ -164,3 +164,31 @@
     - De outra origem (ou Postman com `Origin` diferente), requisições devem falhar por CORS.
     - Opcional: defina `RATE_MAX=5` e faça 6+ requisições rápidas a `GET /health` → espere `429` com headers `RateLimit-*`/`X-RateLimit-*` e corpo com `{ error, detail }`.
 
+“Commit 8 (fix: unificar bucket e erros de S3)”
+  - “Antes”:
+    ```ts
+    // utils/s3.ts (buckets divergentes e fallback hardcoded)
+    Bucket: process.env.AWS_S3_BUCKET || 'challenge-blog-uploads'
+    // ...
+    Bucket: process.env.AWS_S3_BUCKET || 'tech-challenge-blog-uploads'
+
+    // uploadController.ts (vazava mensagens detalhadas)
+    res.status(500).json({ error: 'Upload failed', message: error instanceof Error ? error.message : 'Unknown error' })
+    ```
+  - “Depois”:
+    ```ts
+    // utils/s3.ts (bucket unificado + obrigatório)
+    const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET;
+    if (!AWS_S3_BUCKET) throw new Error('AWS_S3_BUCKET is not set...');
+    Bucket: AWS_S3_BUCKET
+
+    // uploadController.ts (erros genéricos, sem vazar detalhes)
+    res.status(500).json({ error: 'Upload failed', detail: 'An error occurred while uploading the file. Please try again later.' })
+    ```
+  - “Impacto”: DRY e previsibilidade na infra (um único bucket por ambiente), menos risco de má configuração; respostas de erro mais seguras (sem expor detalhes internos), mantendo logs do lado do servidor.
+  - “Como testar”:
+    - Defina `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `AWS_S3_BUCKET`.
+    - `cd backend && npm run dev`.
+    - Upload feliz: `POST /api/upload/image` (multipart `image`) com Bearer → 200 com `{ url, key, bucket, etag }`.
+    - Forçar erro (bucket inválido ou credenciais) → 500 com `{ error, detail }` genérico; conferir logs do servidor para detalhes.
+

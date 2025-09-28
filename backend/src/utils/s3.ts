@@ -8,6 +8,12 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION || 'us-east-1',
 });
 
+// Enforce bucket configuration
+const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET;
+if (!AWS_S3_BUCKET) {
+  throw new Error('AWS_S3_BUCKET is not set. Configure process.env.AWS_S3_BUCKET');
+}
+
 export const uploadToS3 = (
   file: Express.Multer.File,
   folder: string = 'uploads'
@@ -15,7 +21,7 @@ export const uploadToS3 = (
   const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}-${file.originalname}`;
   
   const uploadParams = {
-    Bucket: process.env.AWS_S3_BUCKET || 'challenge-blog-uploads',
+    Bucket: AWS_S3_BUCKET,
     Key: fileName,
     Body: file.buffer,
     ContentType: file.mimetype,
@@ -35,7 +41,7 @@ export const uploadToS3 = (
 
 export const deleteFromS3 = (key: string): Promise<void> => {
   const deleteParams = {
-    Bucket: process.env.AWS_S3_BUCKET || 'tech-challenge-blog-uploads',
+    Bucket: AWS_S3_BUCKET,
     Key: key,
   };
 
@@ -52,7 +58,7 @@ export const deleteFromS3 = (key: string): Promise<void> => {
 
 export const generateSignedUrl = (key: string, expiresIn: number = 3600): string => {
   return s3.getSignedUrl('getObject', {
-    Bucket: process.env.AWS_S3_BUCKET || 'tech-challenge-blog-uploads',
+    Bucket: AWS_S3_BUCKET,
     Key: key,
     Expires: expiresIn,
   });

@@ -72,7 +72,8 @@ export const uploadImage = async (req: AuthenticatedRequest, res: Response): Pro
     console.error('Upload error:', error);
     res.status(500).json({ 
       error: 'Upload failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      // Avoid leaking internal details; expose generic message
+      detail: 'An error occurred while uploading the file. Please try again later.'
     });
   }
 };
@@ -106,7 +107,7 @@ export const uploadImageDirect = async (req: AuthenticatedRequest, res: Response
     console.error('Upload error:', error);
     res.status(500).json({ 
       error: 'Upload failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      detail: 'An error occurred while uploading the file. Please try again later.'
     });
   }
 };
@@ -135,7 +136,7 @@ export const deleteImage = async (req: AuthenticatedRequest, res: Response): Pro
     console.error('Delete error:', error);
     res.status(500).json({ 
       error: 'Delete failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      detail: 'An error occurred while deleting the file. Please try again later.'
     });
   }
 };
