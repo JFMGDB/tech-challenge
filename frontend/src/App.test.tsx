@@ -2,17 +2,41 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-// Intentionally broken test for evaluation
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+jest.mock('./hooks/useAuth', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    useAuth: () => ({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      login: jest.fn(),
+      register: jest.fn(),
+      logout: jest.fn(),
+      updateProfile: jest.fn(),
+    }),
+    AuthProvider: ({ children }: { children: React.ReactNode }) => (
+      <>{children}</>
+    ),
+  };
 });
 
-// Another intentionally broken test
-test('should fail - broken test for evaluation', () => {
-  render(<App />);
-  // This will fail because we don't have this text in our app
-  const nonExistentElement = screen.getByText(/this text does not exist/i);
-  expect(nonExistentElement).toBeInTheDocument();
+jest.mock('./components/layout/Layout', () => ({
+  Layout: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+jest.mock('./pages/auth/LoginPage', () => ({
+  LoginPage: () => <h1>Welcome Back</h1>,
+}));
+
+describe('App', () => {
+  it('renders the login page heading when navigating to /login', () => {
+    window.history.pushState({}, 'Login page', '/login');
+
+    render(<App />);
+
+    expect(
+      screen.getByRole('heading', { name: /welcome back/i })
+    ).toBeInTheDocument();
+  });
 });
