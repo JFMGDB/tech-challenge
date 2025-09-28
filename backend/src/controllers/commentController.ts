@@ -22,7 +22,8 @@ export const getComments = async (req: AuthenticatedRequest, res: Response): Pro
     const comments = await Comment.findAndCountAll({
       where: { 
         postId: parseInt(postId),
-        parentId: null
+        parentId: null,
+        isApproved: true,
       } as any, // Type assertion to bypass strict typing for demo
       limit: limitNumber,
       offset,
@@ -36,6 +37,8 @@ export const getComments = async (req: AuthenticatedRequest, res: Response): Pro
         {
           model: Comment,
           as: 'replies',
+          where: { isApproved: true } as any,
+          required: false,
           include: [
             {
               model: User,
@@ -188,6 +191,109 @@ export const deleteComment = async (req: AuthenticatedRequest, res: Response): P
     });
   } catch (error) {
     console.error('Delete comment error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const approveComment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { id } = req.params;
+
+    const comment = await Comment.findByPk(parseInt(id));
+    if (!comment) {
+      res.status(404).json({ error: 'Comment not found' });
+      return;
+    }
+
+    // Authorization: post author (or admin if such a role exists)
+    const post = await Post.findByPk(comment.postId);
+    if (!post) {
+      res.status(404).json({ error: 'Post not found' });
+      return;
+    }
+
+    let isAdmin = false;
+    try {
+      const requestingUser = await User.findByPk(req.user.id);
+      // Optional admin check if a role field exists
+      isAdmin = Boolean((requestingUser as any)?.role === 'admin');
+    } catch {}
+
+    if (!isAdmin && post.authorId !== req.user.id) {
+      res.status(403).json({ error: 'Not authorized to approve comments for this post' });
+      return;
+    }
+
+    await comment.update({ isApproved: true });
+
+    const updated = await Comment.findByPk(comment.id, {
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'username', 'avatar'] },
+      ],
+    });
+
+    res.status(200).json({
+      message: 'Comment approved successfully',
+      comment: updated,
+    });
+  } catch (error) {
+    console.error('Approve comment error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const unapproveComment = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'User not authenticated' });
+      return;
+    }
+
+    const { id } = req.params;
+
+    const comment = await Comment.findByPk(parseInt(id));
+    if (!comment) {
+      res.status(404).json({ error: 'Comment not found' });
+      return;
+    }
+
+    // Authorization: post author (or admin if such a role exists)
+    const post = await Post.findByPk(comment.postId);
+    if (!post) {
+      res.status(404).json({ error: 'Post not found' });
+      return;
+    }
+
+    let isAdmin = false;
+    try {
+      const requestingUser = await User.findByPk(req.user.id);
+      isAdmin = Boolean((requestingUser as any)?.role === 'admin');
+    } catch {}
+
+    if (!isAdmin && post.authorId !== req.user.id) {
+      res.status(403).json({ error: 'Not authorized to unapprove comments for this post' });
+      return;
+    }
+
+    await comment.update({ isApproved: false });
+
+    const updated = await Comment.findByPk(comment.id, {
+      include: [
+        { model: User, as: 'author', attributes: ['id', 'username', 'avatar'] },
+      ],
+    });
+
+    res.status(200).json({
+      message: 'Comment unapproved successfully',
+      comment: updated,
+    });
+  } catch (error) {
+    console.error('Unapprove comment error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

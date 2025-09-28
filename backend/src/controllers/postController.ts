@@ -108,6 +108,8 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
         {
           model: Comment,
           as: 'comments',
+          where: { isApproved: true } as any,
+          required: false,
           include: [
             {
               model: User,
@@ -117,6 +119,8 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
             {
               model: Comment,
               as: 'replies',
+              where: { isApproved: true } as any,
+              required: false,
               include: [
                 {
                   model: User,

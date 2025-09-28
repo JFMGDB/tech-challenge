@@ -684,3 +684,43 @@
     - Atualizar filtro em runtime: `setCategory('javascript')`
     - Opcional: `cd frontend && npm run build` e validar listagem filtrada.
 
+“Commit 19 (feat(comments): endpoints de moderação)”
+  - “Antes”:
+    ```ts
+    // commentController.ts (getComments sem moderação)
+    where: { postId: parseInt(postId), parentId: null }
+
+    // postController.ts (getPostById sem filtrar aprovação)
+    include: [{ model: Comment, as: 'comments', include: [{ as: 'replies' }] }]
+
+    // routes/comments.ts (sem rotas de approve/unapprove)
+    router.post('/'); router.put('/:id'); router.delete('/:id');
+    ```
+  - “Depois”:
+    ```ts
+    // commentController.ts (visibilidade apenas aprovados)
+    where: { postId: parseInt(postId), parentId: null, isApproved: true }
+    include: [{ as: 'replies', where: { isApproved: true } as any, required: false }]
+
+    // Novos handlers
+    export const approveComment = async (...) => { /* post.authorId ou admin; isApproved=true */ };
+    export const unapproveComment = async (...) => { /* post.authorId ou admin; isApproved=false */ };
+
+    // postController.ts (detalhe com moderação)
+    include: [{ as: 'comments', where: { isApproved: true } as any, required: false,
+               include: [{ as: 'replies', where: { isApproved: true } as any, required: false }] }]
+
+    // routes/comments.ts
+    router.post('/:id/approve', authenticateToken, validateParams(idParamSchema), approveComment);
+    router.post('/:id/unapprove', authenticateToken, validateParams(idParamSchema), unapproveComment);
+    ```
+  - “Impacto”:
+    - Segurança/controle: somente autor do post (ou admin) modera.
+    - Consistência: endpoints de listagem retornam apenas comentários aprovados.
+    - Sem mudanças de schema; aderente a regras de negócio.
+  - “Como testar”:
+    - Criar comentário (autenticado): `POST /api/comments` body `{ content, postId }`.
+    - Listar: `GET /api/comments/post/:postId` e `GET /api/posts/:id` → não exibem comentários não aprovados.
+    - Aprovar: `POST /api/comments/:id/approve` (como autor do post ou admin) → volta a aparecer nas listagens.
+    - Desaprovar: `POST /api/comments/:id/unapprove` → deixa de aparecer.
+
