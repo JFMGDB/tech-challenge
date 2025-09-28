@@ -724,3 +724,44 @@
     - Aprovar: `POST /api/comments/:id/approve` (como autor do post ou admin) → volta a aparecer nas listagens.
     - Desaprovar: `POST /api/comments/:id/unapprove` → deixa de aparecer.
 
+“Commit 20 (feat(realtime): SSE de comentários com fallback)”
+  - “Antes”:
+    ```ts
+    // Não havia endpoint SSE
+    // Hook useComments: apenas busca inicial; sem realtime/polling
+    useEffect(() => { getComments(postId); }, [postId]);
+    ```
+  - “Depois”:
+    ```ts
+    // utils/sse.ts (publish/subscribe por postId)
+    export const subscribe = (postId: number, res: Response) => { /* mantém conexões; heartbeat */ };
+    export const publishCommentEvent = (postId, event, payload) => publish(postId, event, payload);
+
+    // index.ts (rota SSE)
+    app.get('/api/comments/stream/:postId', (req, res) => {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      const unsubscribe = subscribe(parseInt(req.params.postId), res);
+      req.on('close', () => unsubscribe());
+    });
+
+    // commentController.ts (emite eventos)
+    publishCommentEvent(postId, 'comment_created' | 'comment_updated' | 'comment_deleted' | 'comment_approved' | 'comment_unapproved', {...})
+
+    // useComments.ts (SSE com fallback polling)
+    const es = new EventSource(`${base}/comments/stream/${postId}`);
+    es.addEventListener('comment_created', () => refresh()); // idem para updated/deleted/approved/unapproved
+    // fallback: polling a cada 5s se SSE não conectar em ~1.5s
+    ```
+  - “Impacto”:
+    - **Usabilidade**: comentários aparecem/atualizam em tempo real sem reload.
+    - **Eficiência**: SSE leve quando disponível; polling só como fallback.
+    - **Manutenibilidade**: ponto único de publicação (DRY) e eventos padronizados.
+  - “Como testar”:
+    - Backend: `cd backend && npm run dev`.
+    - Frontend: `cd frontend && npm start`.
+    - Abrir o detalhe de um post em duas janelas. Criar/editar/aprovar comentários em uma delas.
+    - Ver na outra janela que os comentários surgem/atualizam sem recarregar.
+    - Opcional: testar SSE direto (dev): `curl -N http://localhost:3001/api/comments/stream/1` (observando eventos).
+

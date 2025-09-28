@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { Op } from 'sequelize';
 import { Comment, Post, User } from '../models';
+import { publishCommentEvent } from '../utils/sse';
 import { AuthenticatedRequest, CreateCommentRequest } from '../types';
 
 export const getComments = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -109,6 +110,9 @@ export const createComment = async (req: AuthenticatedRequest, res: Response): P
       ],
     });
 
+    // Broadcast creation (will appear to listeners after approval)
+    publishCommentEvent(postId, 'comment_created', { comment: createdComment });
+
     res.status(201).json({
       message: 'Comment created successfully',
       comment: createdComment,
@@ -153,6 +157,8 @@ export const updateComment = async (req: AuthenticatedRequest, res: Response): P
       ],
     });
 
+    publishCommentEvent(comment.postId, 'comment_updated', { comment: updatedComment });
+
     res.status(200).json({
       message: 'Comment updated successfully',
       comment: updatedComment,
@@ -185,6 +191,8 @@ export const deleteComment = async (req: AuthenticatedRequest, res: Response): P
     }
 
     await comment.destroy();
+
+    publishCommentEvent(comment.postId, 'comment_deleted', { id: comment.id });
 
     res.status(200).json({
       message: 'Comment deleted successfully',
@@ -237,6 +245,8 @@ export const approveComment = async (req: AuthenticatedRequest, res: Response): 
       ],
     });
 
+    publishCommentEvent(comment.postId, 'comment_approved', { comment: updated });
+
     res.status(200).json({
       message: 'Comment approved successfully',
       comment: updated,
@@ -287,6 +297,8 @@ export const unapproveComment = async (req: AuthenticatedRequest, res: Response)
         { model: User, as: 'author', attributes: ['id', 'username', 'avatar'] },
       ],
     });
+
+    publishCommentEvent(comment.postId, 'comment_unapproved', { comment: updated });
 
     res.status(200).json({
       message: 'Comment unapproved successfully',

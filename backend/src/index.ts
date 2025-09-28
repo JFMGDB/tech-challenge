@@ -11,6 +11,7 @@ import authRoutes from './routes/auth';
 import postRoutes from './routes/posts';
 import commentRoutes from './routes/comments';
 import uploadRoutes from './routes/upload';
+import { subscribe } from './utils/sse';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -68,6 +69,24 @@ app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/upload', uploadRoutes);
+
+// SSE: comments stream per postId
+app.get('/api/comments/stream/:postId', (req, res) => {
+  // Headers for SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders?.();
+
+  const postId = parseInt(req.params.postId);
+  if (!Number.isFinite(postId)) {
+    res.status(400).end('Invalid postId');
+    return;
+  }
+
+  const unsubscribe = subscribe(postId, res);
+  req.on('close', () => unsubscribe());
+});
 
 // Error handling middleware
 app.use(notFoundHandler);
