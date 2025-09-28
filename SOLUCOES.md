@@ -231,3 +231,44 @@
     - Remover arquivo: `DELETE /api/upload/image/:key`.
     - Alternar para S3 removendo `USE_LOCAL_UPLOAD` (ou `false`) e definindo variáveis da AWS; repetir o fluxo.
 
+“Commit 10 (feat: validações adicionais com Joi)”
+  - “Antes”:
+    ```ts
+    // comments.ts (sem validação de params/body em update/delete)
+    router.put('/:id', authenticateToken, updateComment);
+    router.delete('/:id', authenticateToken, deleteComment);
+
+    // posts.ts (sem validação de params em get/delete)
+    router.get('/:id', optionalAuth, getPostById);
+    router.put('/:id', authenticateToken, validateRequest(updatePostSchema), updatePost);
+    router.delete('/:id', authenticateToken, deletePost);
+
+    // validation.ts (sem validateParams/updateCommentSchema)
+    ```
+  - “Depois”:
+    ```ts
+    // validation.ts
+    export const validateParams = (schema: Joi.ObjectSchema) => (req, res, next) => { /* ... */ };
+    export const updateCommentSchema = Joi.object({ content: Joi.string().min(1).max(5000).required() });
+    export const idParamSchema = Joi.object({ id: Joi.number().integer().positive().required() });
+    export const postIdParamSchema = Joi.object({ postId: Joi.number().integer().positive().required() });
+
+    // comments.ts
+    router.get('/post/:postId', optionalAuth, validateParams(postIdParamSchema), getComments);
+    router.put('/:id', authenticateToken, validateParams(idParamSchema), validateRequest(updateCommentSchema), updateComment);
+    router.delete('/:id', authenticateToken, validateParams(idParamSchema), deleteComment);
+
+    // posts.ts
+    router.get('/:id', optionalAuth, validateParams(idParamSchema), getPostById);
+    router.put('/:id', authenticateToken, validateParams(idParamSchema), validateRequest(updatePostSchema), updatePost);
+    router.delete('/:id', authenticateToken, validateParams(idParamSchema), deletePost);
+    ```
+  - “Impacto”: Segurança e robustez reforçadas (early return 400 para params/payload inválidos), respostas consistentes de validação, prevenção de acessos/updates com identificadores inválidos; melhora DX com mensagens claras.
+  - “Como testar”:
+    - `GET /api/posts/abc` → 400 (param inválido).
+    - `PUT /api/posts/1` com `tags: "not-array"` → 400.
+    - `GET /api/comments/post/notnumber` → 400.
+    - `PUT /api/comments/1` com `{ content: '' }` → 400.
+    - `DELETE /api/comments/NaN` → 400.
+    - Casos válidos continuam 2xx.
+

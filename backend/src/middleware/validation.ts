@@ -19,6 +19,24 @@ export const validateRequest = (schema: Joi.ObjectSchema) => {
   };
 };
 
+export const validateParams = (schema: Joi.ObjectSchema) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const { error } = schema.validate(req.params);
+    
+    if (error) {
+      const errorMessage = error.details.map(detail => detail.message).join(', ');
+      res.status(400).json({ 
+        error: 'Validation error',
+        message: errorMessage,
+        details: error.details 
+      });
+      return;
+    }
+    
+    next();
+  };
+};
+
 // User validation schemas
 export const registerSchema = Joi.object({
   username: Joi.string().min(3).max(50).pattern(/^[a-zA-Z0-9_-]+$/).required(),
@@ -55,4 +73,17 @@ export const createCommentSchema = Joi.object({
   content: Joi.string().min(1).max(5000).required(),
   postId: Joi.number().integer().positive().required(),
   parentId: Joi.number().integer().positive().optional(),
+});
+
+export const updateCommentSchema = Joi.object({
+  content: Joi.string().min(1).max(5000).required(),
+});
+
+// Params schemas
+export const idParamSchema = Joi.object({
+  id: Joi.number().integer().positive().required(),
+});
+
+export const postIdParamSchema = Joi.object({
+  postId: Joi.number().integer().positive().required(),
 });
