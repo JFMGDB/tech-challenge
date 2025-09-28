@@ -61,3 +61,33 @@
       - `GET /api/posts/:id` → deve emitir 1 SELECT com includes aninhados (author, comments.author, replies.author).
     - Opcional: compare tempo/respostas antes/depois; verificar ausência do método no modelo `Post`.
 
+“Commit 5 (perf: ajustar pool e logging no Sequelize)”
+  - “Antes”:
+    ```ts
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    pool: { max: 10, min: 0, acquire: 30000, idle: 10000 },
+    // Intentional performance issue: missing connection pool optimization
+    dialectOptions: {
+      // Missing SSL configuration for production
+      ...(process.env.NODE_ENV === 'production' && {
+        ssl: { require: true, rejectUnauthorized: false }
+      })
+    }
+    ```
+  - “Depois”:
+    ```ts
+    // Log SQL only em desenvolvimento; silencioso em teste/prod
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    pool: { max: 20, min: 5, acquire: 30000, idle: 10000 },
+    // SSL apenas em produção (p.ex. RDS/Cloud SQL com SSL obrigatório)
+    dialectOptions: {
+      ...(process.env.NODE_ENV === 'production' && {
+        ssl: { require: true, rejectUnauthorized: false }
+      })
+    }
+    ```
+  - “Impacto”: Pool otimizado (menos latência e churn de conexões sob carga), redução de ruído de logs fora de dev, guard de SSL explícito para produção (recomendado futuramente usar CA e `rejectUnauthorized: true`).
+  - “Como testar”:
+    - Dev: `cd backend && npm run dev` → ver SQL no console; `GET /health`.
+    
+
