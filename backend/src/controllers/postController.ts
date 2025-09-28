@@ -41,7 +41,6 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       whereClause.authorId = parseInt(authorId);
     }
 
-    // Intentional N+1 query problem: This will cause performance issues
     const posts = await Post.findAndCountAll({
       where: whereClause,
       limit: limitNumber,
@@ -53,27 +52,31 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
           as: 'author',
           attributes: ['id', 'username', 'avatar'],
         },
-        // Missing eager loading for comments and likes - will cause N+1 queries
+        {
+          model: Comment,
+          as: 'comments',
+          attributes: ['id'],
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['id', 'userId'],
+        },
       ],
     });
 
-    // Intentionally inefficient: Making separate queries for each post
-    const postsWithCounts = await Promise.all(
-      posts.rows.map(async (post) => {
-        const commentCount = await Comment.count({ where: { postId: post.id } });
-        const likeCount = await Like.count({ where: { postId: post.id } });
-        const isLiked = req.user 
-          ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-          : false;
-
-        return {
-          ...post.toJSON(),
-          commentCount,
-          likeCount,
-          isLiked,
-        };
-      })
-    );
+    const postsWithCounts = posts.rows.map((post) => {
+      const jsonPost: any = post.toJSON();
+      const enrichedPost = {
+        ...jsonPost,
+        commentCount: jsonPost.comments.length,
+        likeCount: jsonPost.likes.length,
+        isLiked: req.user ? jsonPost.likes.some((like: { userId: number }) => like.userId === req.user?.id) : false,
+      };
+      delete enrichedPost.comments;
+      delete enrichedPost.likes;
+      return enrichedPost;
+    });
 
     res.status(200).json({
       posts: postsWithCounts,
@@ -102,6 +105,33 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
           as: 'author',
           attributes: ['id', 'username', 'firstName', 'lastName', 'avatar'],
         },
+        {
+          model: Comment,
+          as: 'comments',
+          include: [
+            {
+              model: User,
+              as: 'author',
+              attributes: ['id', 'username', 'avatar'],
+            },
+            {
+              model: Comment,
+              as: 'replies',
+              include: [
+                {
+                  model: User,
+                  as: 'author',
+                  attributes: ['id', 'username', 'avatar'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['id', 'userId'],
+        },
       ],
     });
 
@@ -114,21 +144,16 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
     post.viewCount += 1;
     await post.save();
 
-    // Intentional N+1 query problem: Get comments with authors inefficiently
-    const commentsWithAuthors = await post.getCommentsWithAuthors();
-    
-    const likeCount = await Like.count({ where: { postId: post.id } });
-    const isLiked = req.user 
-      ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-      : false;
+    const jsonPost: any = post.toJSON();
+    const enrichedPost = {
+      ...jsonPost,
+      likeCount: jsonPost.likes.length,
+      isLiked: req.user ? jsonPost.likes.some((like: { userId: number }) => like.userId === req.user?.id) : false,
+    };
+    delete enrichedPost.likes;
 
     res.status(200).json({
-      post: {
-        ...post.toJSON(),
-        comments: commentsWithAuthors,
-        likeCount,
-        isLiked,
-      },
+      post: enrichedPost,
     });
   } catch (error) {
     console.error('Get post by id error:', error);
