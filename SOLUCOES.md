@@ -91,3 +91,30 @@
     - Dev: `cd backend && npm run dev` → ver SQL no console; `GET /health`.
     
 
+“Commit 6 (security: exigir JWT_SECRET e padronizar expiração)”
+  - “Antes”:
+    ```ts
+    // utils/jwt.ts
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key';
+    const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+    // middleware/auth.ts
+    jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret')
+    ```
+  - “Depois”:
+    ```ts
+    // utils/jwt.ts
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) throw new Error('JWT_SECRET is not set...');
+    const ACCESS_TOKEN_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || '15m';
+    const REFRESH_TOKEN_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
+    export const verifyToken = (t: string) => jwt.verify(t, JWT_SECRET as any) as JWTPayload;
+    // middleware/auth.ts
+    const decoded = verifyToken(token);
+    ```
+  - “Impacto”: Segurança reforçada (sem segredos default), validade consistente (15m/30d) alinhada a boas práticas, ponto único de verificação de token (DRY), redução de risco de tokens válidos com segredos fracos/ausentes.
+  - “Como testar”:
+    - Defina `JWT_SECRET` e suba o backend: `cd backend && npm run dev`.
+    - `POST /api/auth/login` com credenciais válidas → receba o access token.
+    - `GET /api/auth/profile` com `Authorization: Bearer <token>` → 200 com perfil.
+    - Remova/altere `JWT_SECRET` e reinicie → app deve falhar ao iniciar ou tokens devem ser rejeitados (401/403).
+

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { AuthenticatedRequest, JWTPayload } from '../types';
 import { User } from '../models';
+import { verifyToken } from '../utils/jwt';
 
 export const authenticateToken = async (
   req: AuthenticatedRequest,
@@ -17,7 +17,7 @@ export const authenticateToken = async (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JWTPayload;
+    const decoded = verifyToken(token) as JWTPayload;
     
     // Verify user still exists
     const user = await User.findByPk(decoded.id);
@@ -53,7 +53,7 @@ export const optionalAuth = async (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JWTPayload;
+    const decoded = verifyToken(token) as JWTPayload;
     
     const user = await User.findByPk(decoded.id);
     if (user && user.isActive) {
