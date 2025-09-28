@@ -4,6 +4,7 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: tech-challenge-db
+    restart: unless-stopped
     environment:
       POSTGRES_DB: tech_challenge_blog
       POSTGRES_USER: admin
@@ -14,51 +15,63 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - tech-challenge-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d tech_challenge_blog -h localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: tech-challenge-backend
-    environment:
-      NODE_ENV: development
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: tech_challenge_blog
-      DB_USER: admin
-      DB_PASSWORD: password123
-      JWT_SECRET: your-super-secret-jwt-key-here
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
     ports:
       - "3001:3001"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
     networks:
       - tech-challenge-network
-    # Intentional issue: missing restart policy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: tech-challenge-frontend
+    restart: unless-stopped
     environment:
-      REACT_APP_API_URL: http://localhost:3001
+      # Build-time var for CRA must be present at build; use correct URL for docker network
+      REACT_APP_API_URL: http://backend:3001/api
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - ./frontend:/app
       - /app/node_modules
     networks:
       - tech-challenge-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
 
 volumes:
   postgres_data:

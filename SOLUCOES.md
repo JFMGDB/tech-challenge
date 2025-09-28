@@ -272,3 +272,65 @@
     - `DELETE /api/comments/NaN` → 400.
     - Casos válidos continuam 2xx.
 
+“Commit 11 (chore(docker): healthchecks e restart; ajustar API URL)”
+  - “Antes”:
+    ```yaml
+    # docker-compose.yml (sem restart/healthchecks)
+    services:
+      backend:
+        # ...
+        depends_on:
+          - postgres
+      frontend:
+        environment:
+          REACT_APP_API_URL: http://localhost:3001
+        depends_on:
+          - backend
+    ```
+  - “Depois”:
+    ```yaml
+    services:
+      postgres:
+        restart: unless-stopped
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U admin -d tech_challenge_blog -h localhost"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+          start_period: 10s
+
+      backend:
+        restart: unless-stopped
+        env_file:
+          - ./backend/.env
+        depends_on:
+          postgres:
+            condition: service_healthy
+        healthcheck:
+          test: ["CMD-SHELL", "wget -q -O - http://localhost:3001/health || exit 1"]
+          interval: 10s
+          timeout: 3s
+          retries: 5
+          start_period: 15s
+
+      frontend:
+        restart: unless-stopped
+        environment:
+          REACT_APP_API_URL: http://backend:3001/api
+        depends_on:
+          backend:
+            condition: service_healthy
+        healthcheck:
+          test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/ || exit 1"]
+          interval: 10s
+          timeout: 3s
+          retries: 5
+          start_period: 15s
+    ```
+  - “Impacto”: Inicialização ordenada e resiliente (menos condições de corrida), auto-recuperação com restart, frontend aponta para o backend na rede do Docker (evita CORS/host errado), DX/operabilidade melhores.
+  - “Como testar”:
+    - `docker compose up -d`
+    - `docker compose ps` → aguardar `healthy` em postgres/backend/frontend.
+    - `curl http://localhost:3001/health` → 200 OK.
+    - Abrir `http://localhost:3000` e verificar chamadas à API usando `http://backend:3001/api` (Network do navegador).
+
