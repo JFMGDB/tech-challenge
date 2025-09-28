@@ -41,8 +41,7 @@ describe('Auth Controller', () => {
       expect(isInvalid).toBe(false);
     });
 
-    // Intentionally broken test
-    it('should fail - broken test example', async () => {
+    it('should persist the username provided during creation', async () => {
       const userData = {
         username: 'testuser',
         email: 'test@example.com',
@@ -51,8 +50,7 @@ describe('Auth Controller', () => {
 
       const user = await User.create(userData);
       
-      // This test will fail because we're expecting the wrong value
-      expect(user.username).toBe('wrongusername');
+      expect(user.username).toBe(userData.username);
     });
   });
 
@@ -69,8 +67,7 @@ describe('Auth Controller', () => {
       expect(typeof token).toBe('string');
     });
 
-    // Intentionally broken test
-    it('should fail - broken JWT test', () => {
+    it('should generate a signed JWT string', () => {
       const payload = {
         id: 1,
         email: 'test@example.com',
@@ -78,9 +75,9 @@ describe('Auth Controller', () => {
       };
 
       const token = generateToken(payload);
-      
-      // This will fail because we're expecting undefined
-      expect(token).toBeUndefined();
+
+      expect(token).toBeDefined();
+      expect(typeof token).toBe('string');
     });
   });
 });
