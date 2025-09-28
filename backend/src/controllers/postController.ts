@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { Op } from 'sequelize';
 import { Post, User, Comment, Like } from '../models';
 import { AuthenticatedRequest, CreatePostRequest, UpdatePostRequest, PostQuery } from '../types';
+import logger from '../utils/logger';
 
 export const getPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -89,7 +90,7 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       },
     });
   } catch (error) {
-    console.error('Get posts error:', error);
+    logger.error('Get posts error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -160,7 +161,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
       post: enrichedPost,
     });
   } catch (error) {
-    console.error('Get post by id error:', error);
+    logger.error('Get post by id error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -200,7 +201,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response): Prom
       post: createdPost,
     });
   } catch (error) {
-    console.error('Create post error:', error);
+    logger.error('Create post error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -250,7 +251,7 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
       post: updatedPost,
     });
   } catch (error) {
-    console.error('Update post error:', error);
+    logger.error('Update post error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -282,7 +283,7 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response): Prom
       message: 'Post deleted successfully',
     });
   } catch (error) {
-    console.error('Delete post error:', error);
+    logger.error('Delete post error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -314,7 +315,7 @@ export const likePost = async (req: AuthenticatedRequest, res: Response): Promis
       res.status(200).json({ message: 'Post liked', liked: true });
     }
   } catch (error) {
-    console.error('Like post error:', error);
+    logger.error('Like post error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

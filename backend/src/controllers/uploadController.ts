@@ -1,17 +1,13 @@
 import { Response } from 'express';
 import multer from 'multer';
-import AWS from 'aws-sdk';
+// AWS SDK is configured/used in utils/s3
 import fs from 'fs';
 import path from 'path';
 import { AuthenticatedRequest } from '../types';
 import { uploadToS3, deleteFromS3 } from '../utils/s3';
+import logger from '../utils/logger';
 
-// Configure AWS S3
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-1',
-});
+// No local S3 client here; uploads are handled via utils/s3
 
 // Multer configuration for memory storage
 const memoryStorage = multer.memoryStorage();
@@ -92,7 +88,7 @@ export const uploadImage = async (req: AuthenticatedRequest, res: Response): Pro
       },
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error:', error);
     res.status(500).json({ 
       error: 'Upload failed',
       // Avoid leaking internal details; expose generic message
@@ -127,7 +123,7 @@ export const uploadImageDirect = async (req: AuthenticatedRequest, res: Response
       },
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error:', error);
     res.status(500).json({ 
       error: 'Upload failed',
       detail: 'An error occurred while uploading the file. Please try again later.'
@@ -166,7 +162,7 @@ export const deleteImage = async (req: AuthenticatedRequest, res: Response): Pro
       message: 'File deleted successfully',
     });
   } catch (error) {
-    console.error('Delete error:', error);
+    logger.error('Delete error:', error);
     res.status(500).json({ 
       error: 'Delete failed',
       detail: 'An error occurred while deleting the file. Please try again later.'

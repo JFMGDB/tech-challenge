@@ -46,7 +46,7 @@ export const subscribe = (postId: number, res: Response): (() => void) => {
     }
     try {
       res.end();
-    } catch {}
+    } catch (e) { /* swallow */ }
   };
 
   return unsubscribe;

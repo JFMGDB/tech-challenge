@@ -8,7 +8,7 @@ module.exports = {
   plugins: ['@typescript-eslint'],
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended',
   ],
   rules: {
     '@typescript-eslint/explicit-function-return-type': 'off',
@@ -19,6 +19,10 @@ module.exports = {
     'prefer-const': 'error',
     'no-var': 'error',
   },
+  ignorePatterns: [
+    'dist/**',
+    'src/tests/**'
+  ],
   env: {
     node: true,
     es6: true,

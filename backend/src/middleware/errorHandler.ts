@@ -1,12 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
+import logger from '../utils/logger';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+// next is unused but required by Express error signature
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const errorHandler = (
   error: any,
   req: Request,
   res: Response,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction
 ): void => {
-  console.error('Error:', error);
+  logger.error('Error:', error);
 
   // Sequelize validation errors
   if (error.name === 'SequelizeValidationError') {

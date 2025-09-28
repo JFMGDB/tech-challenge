@@ -5,6 +5,7 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { sequelize } from './config/database';
+import logger from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 import authRoutes from './routes/auth';
@@ -96,19 +97,19 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     await sequelize.authenticate();
-    console.log('✅ Database connection established successfully');
+    logger.info('✅ Database connection established successfully');
     
     if (process.env.NODE_ENV !== 'production') {
       await sequelize.sync({ force: false });
-      console.log('📊 Database synchronized');
+      logger.info('📊 Database synchronized');
     }
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+      logger.info(`🚀 Server is running on port ${PORT}`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV}`);
     });
   } catch (error) {
-    console.error('❌ Unable to start server:', error);
+    logger.error('❌ Unable to start server:', error);
     process.exit(1);
   }
 };

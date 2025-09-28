@@ -9,6 +9,8 @@ export const useComments = (postId: number | null) => {
   const [pagination, setPagination] = useState<any>(null);
   const [isRealtime, setIsRealtime] = useState<boolean>(false);
 
+  // Realtime effect intentionally not dependent on isRealtime to avoid re-creating SSE
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!postId) return;
 

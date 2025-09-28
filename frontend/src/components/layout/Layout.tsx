@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Box } from '../ui';
+// Layout currently doesn't need Box directly; keep UI atoms minimal here
 import { Header } from './Header';
 import { Footer } from './Footer';
 

@@ -1,8 +1,8 @@
 import { Response } from 'express';
-import { Op } from 'sequelize';
 import { Comment, Post, User } from '../models';
 import { publishCommentEvent } from '../utils/sse';
 import { AuthenticatedRequest, CreateCommentRequest } from '../types';
+import logger from '../utils/logger';
 
 export const getComments = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -63,7 +63,7 @@ export const getComments = async (req: AuthenticatedRequest, res: Response): Pro
       },
     });
   } catch (error) {
-    console.error('Get comments error:', error);
+    logger.error('Get comments error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -118,7 +118,7 @@ export const createComment = async (req: AuthenticatedRequest, res: Response): P
       comment: createdComment,
     });
   } catch (error) {
-    console.error('Create comment error:', error);
+    logger.error('Create comment error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -164,7 +164,7 @@ export const updateComment = async (req: AuthenticatedRequest, res: Response): P
       comment: updatedComment,
     });
   } catch (error) {
-    console.error('Update comment error:', error);
+    logger.error('Update comment error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -198,7 +198,7 @@ export const deleteComment = async (req: AuthenticatedRequest, res: Response): P
       message: 'Comment deleted successfully',
     });
   } catch (error) {
-    console.error('Delete comment error:', error);
+    logger.error('Delete comment error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -229,8 +229,9 @@ export const approveComment = async (req: AuthenticatedRequest, res: Response): 
     try {
       const requestingUser = await User.findByPk(req.user.id);
       // Optional admin check if a role field exists
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       isAdmin = Boolean((requestingUser as any)?.role === 'admin');
-    } catch {}
+    } catch (e) { void e; }
 
     if (!isAdmin && post.authorId !== req.user.id) {
       res.status(403).json({ error: 'Not authorized to approve comments for this post' });
@@ -252,7 +253,7 @@ export const approveComment = async (req: AuthenticatedRequest, res: Response): 
       comment: updated,
     });
   } catch (error) {
-    console.error('Approve comment error:', error);
+    logger.error('Approve comment error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -282,8 +283,9 @@ export const unapproveComment = async (req: AuthenticatedRequest, res: Response)
     let isAdmin = false;
     try {
       const requestingUser = await User.findByPk(req.user.id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       isAdmin = Boolean((requestingUser as any)?.role === 'admin');
-    } catch {}
+    } catch (e) { void e; }
 
     if (!isAdmin && post.authorId !== req.user.id) {
       res.status(403).json({ error: 'Not authorized to unapprove comments for this post' });
@@ -305,7 +307,7 @@ export const unapproveComment = async (req: AuthenticatedRequest, res: Response)
       comment: updated,
     });
   } catch (error) {
-    console.error('Unapprove comment error:', error);
+    logger.error('Unapprove comment error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

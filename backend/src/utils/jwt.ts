@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
+import logger from './logger';
 import { JWTPayload } from '../types';
 
 // Enforce presence of JWT secret via environment variable
@@ -8,7 +9,7 @@ if (!JWT_SECRET && process.env.JWT_SECRET_FILE) {
   try {
     JWT_SECRET = fs.readFileSync(process.env.JWT_SECRET_FILE, 'utf8').trim();
   } catch (e) {
-    console.warn('Could not read JWT_SECRET_FILE:', e);
+    logger.warn('Could not read JWT_SECRET_FILE:', e);
   }
 }
 if (!JWT_SECRET) {

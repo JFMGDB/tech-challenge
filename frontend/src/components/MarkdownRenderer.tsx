@@ -33,7 +33,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({ content }) =
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         img(imageProps: any) {
-          return <img loading="lazy" {...imageProps} />;
+          return <img loading="lazy" alt={imageProps?.alt || ''} {...imageProps} />;
         },
       }}
     >

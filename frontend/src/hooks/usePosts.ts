@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { postService, PostQuery } from '../services/postService';
-import { Post, PostsResponse } from '../types';
+import { Post } from '../types';
 
 export const usePosts = (initialQuery: PostQuery = {}) => {
   const [posts, setPosts] = useState<Post[]>([]);
@@ -51,7 +51,7 @@ export const usePosts = (initialQuery: PostQuery = {}) => {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [fetchPosts]);
 
   return {
     posts,

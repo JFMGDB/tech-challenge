@@ -7,6 +7,7 @@ import {
   LoginRequest,
 } from "../types";
 import { generateToken } from "../utils/jwt";
+import logger from '../utils/logger';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -54,7 +55,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       token,
     });
   } catch (error) {
-    console.error("Registration error:", error);
+    logger.error("Registration error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -94,7 +95,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       token,
     });
   } catch (error) {
-    console.error("Login error:", error);
+    logger.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -128,7 +129,7 @@ export const getProfile = async (
       user: user.toJSON(),
     });
   } catch (error) {
-    console.error("Get profile error:", error);
+    logger.error("Get profile error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -162,7 +163,7 @@ export const updateProfile = async (
       user: user.toJSON(),
     });
   } catch (error) {
-    console.error("Update profile error:", error);
+    logger.error("Update profile error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

@@ -765,3 +765,44 @@
     - Ver na outra janela que os comentários surgem/atualizam sem recarregar.
     - Opcional: testar SSE direto (dev): `curl -N http://localhost:3001/api/comments/stream/1` (observando eventos).
 
+“Commit 21 (chore(lint): ajustes de alertas críticos/erros)”
+  - “Antes”:
+    ```text
+    ESLint couldn't find the config "@typescript-eslint/recommended"...
+    error  '_aws' is assigned a value but never used  uploadController.ts
+    error  'next' is defined but never used           errorHandler.ts
+    error  Parsing error: tsconfig does not include src/tests/auth.test.ts
+    error  Empty block statement                      utils/sse.ts
+    ```
+  - “Depois”:
+    ```js
+    // backend/.eslintrc.js
+    extends: ['eslint:recommended', 'plugin:@typescript-eslint/recommended']
+    ignorePatterns: ['dist/**', 'src/tests/**']
+    ```
+    ```ts
+    // utils/logger.ts (padroniza logs e reduz no-console)
+    export const logger = { info: (...a)=>console.log(...), warn: (...), error: (...), debug: (...) };
+
+    // index.ts, controllers/*, middleware/*, utils/jwt.ts
+    // substitui console.* por logger.*
+    ```
+    ```ts
+    // uploadController.ts
+    // remove cliente S3 local não usado; usa utils/s3
+    ```
+    ```ts
+    // errorHandler.ts
+    export const errorHandler = (error: any, req: Request, res: Response, /* next */ _next: NextFunction) => { /* ... */ }
+
+    // utils/sse.ts
+    } catch (e) { /* swallow */ }
+    ```
+  - “Impacto”:
+    - **Estabilidade CI**: zero erros de lint no backend e frontend.
+    - **Manutenibilidade**: ruído reduzido; configuração coerente (plugin TS, ignore de testes/build).
+    - **Observabilidade**: logs via `logger` (padronizados, seguros para produção/dev).
+  - “Como testar”:
+    - Backend: `cd backend && npm ci && npm run lint` → deve exibir 0 erros (warnings remanescentes não críticos).
+    - Frontend: `cd frontend && npm ci && npm run lint` → 0 erros.
+
