@@ -604,3 +604,83 @@
     - Criar/editar um post com markdown (títulos, listas, imagens e blocos de código ` ```js ` etc.).
     - `GET /api/posts` na Home deve exibir resumo com markdown; `GET /api/posts/:id` no detalhe deve renderizar markdown completo com syntax highlight; imagens carregam sob demanda.
 
+“Commit 18 (feat(posts): categorias mapeadas por tags e filtro)”
+  - “Antes”:
+    ```ts
+    // postService.ts
+    export interface PostQuery {
+      page?: number;
+      // ...
+      tags?: string | string[];
+      authorId?: number;
+    }
+
+    // getPosts: só envia 'tags' quando presente; sem 'category'
+    Object.entries(query).forEach(([key, value]) => {
+      if (value === undefined) return;
+      if (key === 'tags') {
+        const csv = Array.isArray(value) ? value.join(',') : value;
+        if (csv) params.append('tags', csv);
+      } else {
+        params.append(key, value.toString());
+      }
+    });
+    ```
+
+    ```ts
+    // usePosts.ts (sem helpers de categoria)
+    return {
+      posts, loading, error, pagination, query,
+      fetchPosts, refreshPosts, setQuery,
+    };
+    ```
+  - “Depois”:
+    ```ts
+    // postService.ts
+    export interface PostQuery {
+      // ...
+      tags?: string | string[];
+      category?: string; // mapeada para 'tags'
+      authorId?: number;
+    }
+
+    // Combina category + tags → 'tags' CSV único
+    const tagParts: string[] = [];
+    if (query.category) tagParts.push(query.category);
+    if (query.tags) { /* aceita array ou csv */ }
+    const uniqueTags = Array.from(new Set(tagParts.filter(Boolean)));
+
+    // Anexa demais params, ignorando 'tags' e 'category'
+    Object.entries(query).forEach(([key, value]) => {
+      if (value === undefined) return;
+      if (key === 'tags' || key === 'category') return;
+      params.append(key, value.toString());
+    });
+    if (uniqueTags.length > 0) params.append('tags', uniqueTags.join(','));
+    ```
+
+    ```ts
+    // usePosts.ts
+    const getCategory = (post: Post) => post.tags?.[0];
+    const setCategory = (category?: string) => {
+      const next = { ...query };
+      if (category?.trim()) next.category = category.trim(); else delete next.category;
+      fetchPosts(next);
+    };
+
+    return {
+      posts, loading, error, pagination, query,
+      fetchPosts, refreshPosts, setQuery,
+      getCategory, setCategory,
+    };
+    ```
+  - “Impacto”:
+    - Usabilidade: filtro de categoria simples (convenciona primeira tag como categoria).
+    - API estável: backend continua aceitando `tags` (sem mudanças).
+    - Manutenibilidade: mapeamento único (DRY), tipagem explícita em `PostQuery`.
+  - “Como testar”:
+    - Requisição direta: `GET /api/posts?tags=javascript`
+    - Via serviço: `usePosts({ category: 'javascript' })`
+    - Atualizar filtro em runtime: `setCategory('javascript')`
+    - Opcional: `cd frontend && npm run build` e validar listagem filtrada.
+

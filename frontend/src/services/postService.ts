@@ -13,22 +13,40 @@ export interface PostQuery {
   sortOrder?: 'ASC' | 'DESC';
   search?: string;
   tags?: string | string[];
+  // Optional convenience filter: maps to `tags` (first-class category)
+  category?: string;
   authorId?: number;
 }
 
 export const postService = {
   async getPosts(query: PostQuery = {}): Promise<PostsResponse> {
     const params = new URLSearchParams();
-    
+
+    // Build tags filter, honoring optional `category`
+    const tagParts: string[] = [];
+    if (query.category) {
+      tagParts.push(query.category);
+    }
+    if (query.tags) {
+      if (Array.isArray(query.tags)) {
+        tagParts.push(...query.tags);
+      } else if (query.tags) {
+        // support csv passed directly
+        tagParts.push(...query.tags.split(',').map((t) => t.trim()).filter(Boolean));
+      }
+    }
+    const uniqueTags = Array.from(new Set(tagParts.filter(Boolean)));
+
+    // Append non-tag params
     Object.entries(query).forEach(([key, value]) => {
       if (value === undefined) return;
-      if (key === 'tags') {
-        const csv = Array.isArray(value) ? value.join(',') : value;
-        if (csv) params.append('tags', csv);
-      } else {
-        params.append(key, value.toString());
-      }
+      if (key === 'tags' || key === 'category') return;
+      params.append(key, value.toString());
     });
+
+    if (uniqueTags.length > 0) {
+      params.append('tags', uniqueTags.join(','));
+    }
     
     const response = await api.get<PostsResponse>(`/posts?${params.toString()}`);
     return response.data;

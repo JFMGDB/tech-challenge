@@ -32,6 +32,23 @@ export const usePosts = (initialQuery: PostQuery = {}) => {
     fetchPosts();
   };
 
+  // Treat first tag as category (derived)
+  const getCategory = useCallback((post: Post): string | undefined => {
+    if (!post || !post.tags || post.tags.length === 0) return undefined;
+    return post.tags[0];
+  }, []);
+
+  // Convenience: set category filter (maps to tags via service)
+  const setCategory = (category?: string) => {
+    const nextQuery: PostQuery = { ...query };
+    if (category && category.trim()) {
+      nextQuery.category = category.trim();
+    } else {
+      delete nextQuery.category;
+    }
+    fetchPosts(nextQuery);
+  };
+
   useEffect(() => {
     fetchPosts();
   }, []);
@@ -45,6 +62,8 @@ export const usePosts = (initialQuery: PostQuery = {}) => {
     fetchPosts,
     refreshPosts,
     setQuery,
+    getCategory,
+    setCategory,
   };
 };
 
