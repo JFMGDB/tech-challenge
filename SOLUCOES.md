@@ -334,3 +334,48 @@
     - `curl http://localhost:3001/health` → 200 OK.
     - Abrir `http://localhost:3000` e verificar chamadas à API usando `http://backend:3001/api` (Network do navegador).
 
+“Commit 12 (security(docker): usar secrets para credenciais)”
+  - “Antes”:
+    ```yaml
+    services:
+      postgres:
+        environment:
+          POSTGRES_PASSWORD: password123
+
+      backend:
+        environment:
+          DB_PASSWORD: password123
+          JWT_SECRET: your-super-secret-jwt-key-here
+    ```
+  - “Depois”:
+    ```yaml
+    services:
+      postgres:
+        environment:
+          POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+        secrets:
+          - db_password
+
+      backend:
+        env_file:
+          - ./backend/.env
+        environment:
+          DB_PASSWORD_FILE: /run/secrets/db_password
+          JWT_SECRET_FILE: /run/secrets/jwt_secret
+        secrets:
+          - db_password
+          - jwt_secret
+
+    secrets:
+      db_password:
+        file: ./secrets/db_password.txt
+      jwt_secret:
+        file: ./secrets/jwt_secret.txt
+    ```
+  - “Impacto”: Segurança reforçada (segredos fora de env/compose), alinhado a padrões de orquestração (tmpfs, escopo controlado), troca de segredos sem rebuild; mantém compatibilidade com `.env` em dev.
+  - “Como testar”:
+    - Preencha `secrets/db_password.txt` e `secrets/jwt_secret.txt`.
+    - `docker compose up -d`.
+    - `docker compose exec postgres env | grep POSTGRES_PASSWORD` → não deve exibir senha (usa *_FILE).
+    - Backend deve iniciar normalmente; `curl http://localhost:3001/health` → 200.
+

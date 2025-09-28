@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: tech_challenge_blog
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
     ports:
       - "5432:5432"
     volumes:
@@ -21,6 +21,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    secrets:
+      - db_password
 
   backend:
     build:
@@ -30,6 +32,9 @@ services:
     restart: unless-stopped
     env_file:
       - ./backend/.env
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
     ports:
       - "3001:3001"
     depends_on:
@@ -46,6 +51,9 @@ services:
       timeout: 3s
       retries: 5
       start_period: 15s
+    secrets:
+      - db_password
+      - jwt_secret
 
   frontend:
     build:
@@ -54,7 +62,6 @@ services:
     container_name: tech-challenge-frontend
     restart: unless-stopped
     environment:
-      # Build-time var for CRA must be present at build; use correct URL for docker network
       REACT_APP_API_URL: http://backend:3001/api
     ports:
       - "3000:3000"
@@ -79,3 +86,9 @@ volumes:
 networks:
   tech-challenge-network:
     driver: bridge
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt

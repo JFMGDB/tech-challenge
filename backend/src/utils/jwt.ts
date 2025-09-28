@@ -1,8 +1,16 @@
 import jwt from 'jsonwebtoken';
+import fs from 'fs';
 import { JWTPayload } from '../types';
 
 // Enforce presence of JWT secret via environment variable
-const JWT_SECRET = process.env.JWT_SECRET;
+let JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET && process.env.JWT_SECRET_FILE) {
+  try {
+    JWT_SECRET = fs.readFileSync(process.env.JWT_SECRET_FILE, 'utf8').trim();
+  } catch (e) {
+    console.warn('Could not read JWT_SECRET_FILE:', e);
+  }
+}
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is not set. Set process.env.JWT_SECRET to a strong secret key.');
 }
