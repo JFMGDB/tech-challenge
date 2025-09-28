@@ -14,18 +14,33 @@ import uploadRoutes from './routes/upload';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Rate limiting
+// Rate limiting (stricter defaults; customizable via envs)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: parseInt(process.env.RATE_WINDOW_MS || String(15 * 60 * 1000)),
+  max: parseInt(process.env.RATE_MAX || '100'),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many requests',
+    detail: 'Rate limit exceeded. Please try again later.'
+  }
 });
 
 // Middleware
 app.use(helmet());
 app.use(compression());
+// CORS: restrict to configured frontend URL; dev fallback only when unset
+const allowedOrigin = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : undefined);
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!allowedOrigin) {
+      return callback(new Error('CORS not configured: FRONTEND_URL is required in non-dev environments'));
+    }
+    if (!origin || origin === allowedOrigin) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

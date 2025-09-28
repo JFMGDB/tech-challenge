@@ -118,3 +118,49 @@
     - `GET /api/auth/profile` com `Authorization: Bearer <token>` → 200 com perfil.
     - Remova/altere `JWT_SECRET` e reinicie → app deve falhar ao iniciar ou tokens devem ser rejeitados (401/403).
 
+“Commit 7 (security: restringir CORS e revisar rate limit)”
+  - “Antes”:
+    ```ts
+    // CORS (permissivo com fallback sempre ativo)
+    app.use(cors({
+      origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+      credentials: true
+    }));
+
+    // Rate limit (mensagem genérica, sem headers padrão)
+    const limiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 100,
+      message: 'Too many requests from this IP, please try again later.'
+    });
+    ```
+  - “Depois”:
+    ```ts
+    // Rate limit (configurável por env e com headers padrão)
+    const limiter = rateLimit({
+      windowMs: parseInt(process.env.RATE_WINDOW_MS || String(15 * 60 * 1000)),
+      max: parseInt(process.env.RATE_MAX || '100'),
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: 'Too many requests', detail: 'Rate limit exceeded. Please try again later.' }
+    });
+
+    // CORS: restringe a FRONTEND_URL; fallback só em dev
+    const allowedOrigin = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : undefined);
+    app.use(cors({
+      origin: (origin, callback) => {
+        if (!allowedOrigin) return callback(new Error('CORS not configured: FRONTEND_URL is required in non-dev environments'));
+        if (!origin || origin === allowedOrigin) return callback(null, true);
+        return callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true
+    }));
+    ```
+  - “Impacto”: Segurança reforçada (bloqueio de origens não autorizadas em produção), melhor observabilidade (headers de rate limit), limites ajustáveis via env, mensagens de erro padronizadas; reduz superfície para abuso/brute-force.
+  - “Como testar”:
+    - Defina `FRONTEND_URL` para a origem do frontend (ex.: `http://localhost:3000`).
+    - Suba o backend: `cd backend && npm run dev`.
+    - Do frontend correto, chame qualquer rota (`GET /health`, `GET /api/posts`). Deve funcionar.
+    - De outra origem (ou Postman com `Origin` diferente), requisições devem falhar por CORS.
+    - Opcional: defina `RATE_MAX=5` e faça 6+ requisições rápidas a `GET /health` → espere `429` com headers `RateLimit-*`/`X-RateLimit-*` e corpo com `{ error, detail }`.
+
