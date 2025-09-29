@@ -877,4 +877,74 @@
   - “Como testar”:
     - Dev: `cd frontend && npm start` → navegar por `/`, `/post/:id`, `/login` e abrir DevTools → aba Network deve mostrar chunks carregados sob demanda (arquivos `*.chunk.js`).
     - Build: `cd frontend && npm run build` → verificar saída com múltiplos chunks em `build/static/js/`.
+    
+
+“Commit 23 (test(ci): JWT padrão no setup + silenciar warnings e await lazy)”
+  - “Antes”:
+    ```ts
+    // backend/src/tests/setup.ts (sem JWT definido para testes)
+    import { sequelize } from '../config/database';
+    // Setup test database
+    beforeAll(async () => {
+      await sequelize.sync({ force: true });
+    });
+    ```
+    ```ts
+    // frontend/src/setupTests.ts (apenas jest-dom; logs ruidosos nos testes)
+    import '@testing-library/jest-dom';
+    ```
+    ```tsx
+    // frontend/src/App.test.tsx (não aguardava lazy/Suspense)
+    render(<App />);
+    expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+    ```
+
+  - “Depois”:
+    ```ts
+    // backend/src/tests/setup.ts (define JWT_SECRET padrão em ambiente de teste)
+    if (!process.env.JWT_SECRET) {
+      process.env.JWT_SECRET = 'tests-secret';
+    }
+    import { sequelize } from '../config/database';
+    beforeAll(async () => { await sequelize.sync({ force: true }); });
+    afterAll(async () => { await sequelize.close(); });
+    ```
+    ```ts
+    // frontend/src/setupTests.ts (filtra avisos ruidosos mantendo demais logs)
+    import '@testing-library/jest-dom';
+    const originalWarn = console.warn.bind(console);
+    const originalError = console.error.bind(console);
+    beforeAll(() => {
+      jest.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => {
+        const first = args[0];
+        if (typeof first === 'string' && first.includes('React Router Future Flag Warning')) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        originalWarn(...(args as any[]));
+      });
+      jest.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+        const first = args[0];
+        if (typeof first === 'string' && (first.includes('ReactDOMTestUtils.act') || first.includes('not wrapped in act'))) return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        originalError(...(args as any[]));
+      });
+    });
+    afterAll(() => {
+      (console.warn as unknown as jest.Mock).mockRestore?.();
+      (console.error as unknown as jest.Mock).mockRestore?.();
+    });
+    ```
+    ```tsx
+    // frontend/src/App.test.tsx (usa findByRole para aguardar lazy/Suspense)
+    render(<App />);
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+    ```
+
+  - “Impacto”:
+    - **Estabilidade CI**: testes backend não dependem de variáveis externas; execução previsível.
+    - **Signal-to-noise**: saída de testes frontend limpa (sem warnings deprecatórios e de futuros flags), mantendo logs relevantes.
+    - **Confiabilidade**: testes aguardam carregamento lazy corretamente, reduzindo flaky tests.
+
+  - “Como testar”:
+    - Backend: `cd backend && npm test` → suíte deve passar 100% sem necessidade de exportar `JWT_SECRET` no shell.
+    - Frontend (CI): `cd frontend && CI=true npm test --watchAll=false` → 1/1 testes passando, sem warnings no output.
   

@@ -30,13 +30,13 @@ jest.mock('./pages/auth/LoginPage', () => ({
 }));
 
 describe('App', () => {
-  it('renders the login page heading when navigating to /login', () => {
+  it('renders the login page heading when navigating to /login', async () => {
     window.history.pushState({}, 'Login page', '/login');
 
     render(<App />);
 
     expect(
-      screen.getByRole('heading', { name: /welcome back/i })
+      await screen.findByRole('heading', { name: /welcome back/i })
     ).toBeInTheDocument();
   });
 });
